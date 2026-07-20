@@ -1,0 +1,17 @@
+project:
+  type: default
+  output-dir: docs
+
+execute:
+  freeze: auto    # cache computational output; only re-runs a chunk if its code changed
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    code-fold: show
+    code-tools: true
+    fig-width: 8
+    fig-height: 5
+    embed-resources: false
