@@ -2,8 +2,14 @@ suppressPackageStartupMessages(library(ggplot2))
 
 res <- read.csv("data/simulation_results.csv")
 
-net_labels <- c(A_baseline_only = "A: Baseline-only (21 nodes)",
-                B_with_time     = "B: Baseline + early-change (24 nodes)")
+## Derive network labels (with correct node counts) directly from the true
+## DAGs, rather than hardcoding node counts as text -- avoids the labels
+## going stale if the network definitions in 01_define_networks.R change.
+dags <- readRDS("data/true_dags.rds")
+net_labels <- c(
+  A_baseline_only = sprintf("A: Baseline-only (%d nodes)", length(nodes(dags$dagA))),
+  B_with_time     = sprintf("B: Baseline + early-change (%d nodes)", length(nodes(dags$dagB)))
+)
 res$network_label <- net_labels[res$network]
 
 ## Table: primary single-hc power curve
