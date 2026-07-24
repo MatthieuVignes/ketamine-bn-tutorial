@@ -1,9 +1,9 @@
 "network_label","n","roc_auc"
-"A: Baseline-only (21 nodes)",20,0.984681924671112
-"A: Baseline-only (21 nodes)",60,0.997026491259686
-"A: Baseline-only (21 nodes)",100,0.997296810236079
-"A: Baseline-only (21 nodes)",200,0.998648405118039
-"B: Baseline + early-change (24 nodes)",20,0.984520123839009
-"B: Baseline + early-change (24 nodes)",60,0.997733303847855
-"B: Baseline + early-change (24 nodes)",100,0.994471472799646
-"B: Baseline + early-change (24 nodes)",200,0.996848739495798
+"A: Baseline-only (16 nodes)",20,0.990885416666667
+"A: Baseline-only (16 nodes)",60,0.954861111111111
+"A: Baseline-only (16 nodes)",100,0.968532986111111
+"A: Baseline-only (16 nodes)",200,0.993055555555556
+"B: Baseline + early-change (19 nodes)",20,0.996198156682028
+"B: Baseline + early-change (19 nodes)",60,0.995967741935484
+"B: Baseline + early-change (19 nodes)",100,0.995046082949309
+"B: Baseline + early-change (19 nodes)",200,0.995161290322581
