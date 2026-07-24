@@ -41,7 +41,7 @@ suppressPackageStartupMessages({
 })
 ```
 
-## Step 1 — Define two candidate "true" networks
+## Step 1 - Define two candidate "true" networks
 
 We compare two scenarios:
 
@@ -68,7 +68,7 @@ predicting, is highlighted:
 ![Network B: baseline + early-change](figures/networkB_diagram.png)
 :::
 
-## Step 2 — Attach effect sizes
+## Step 2 - Attach effect sizes
 
 Each arc gets a linear-Gaussian standardised coefficient |β| ~ 0.30–0.55, which are moderate effect sizes comparable to the small–moderate correlations reported in the depression-prediction literature). This turns the DAG into a fully specified generative model we can simulate from.
 
@@ -81,7 +81,7 @@ Each arc gets a linear-Gaussian standardised coefficient |β| ~ 0.30–0.55, whi
 The printed $R^2$ values are a sanity check on the signal we're asking the
 learning algorithm to recover: moderate-to-strong ($R^2 \, \approx \,$ 0.35 - 0.75) for the `Response` node, not unrealistically easy and not hopeless.
 
-## Step 3 — Evaluation metrics
+## Step 3 - Evaluation metrics
 
 A learnt network is compared to the true DAG at the level of the **skeleton**
 (undirected edges), not directed arcs, because many DAGs are Markov-equivalent
@@ -98,13 +98,13 @@ a complete miss would understate real performance. We report:
 #| file: R/03_metrics.R
 ```
 
-## Step 4 — Monte Carlo simulation across sample sizes
+## Step 4 - Monte Carlo simulation across sample sizes
 
 For both networks, at n = 20, 30, 40, 50, 60, 75, 100, 150, 200, 300, 500, we
 simulate 200 independent datasets, learn structure via score-based
-hill-climbing (`hc(..., score = "bic-g")`), and evaluate against the truth.
+hill-climbing (`hc(..., score = "bic-g")`), with 10 random restats, and evaluate against the truth.
 We also record, at n = 20/60/100/200, how often each possible edge was
-learned across the 200 replicates. This gives us a natural continuous "score" per edge, we will used later for ROC/precision-recall curves.
+learned across the 200 Monte Carlo replicates. This gives us a natural continuous "score" per edge, we will used later for ROC/precision-recall curves.
 
 ```{r}
 #| label: run-simulation
@@ -113,7 +113,7 @@ learned across the 200 replicates. This gives us a natural continuous "score" pe
 ```
 
 ::: {.callout-note}
-This chunk actually runs (200 $\times$ 11 $\times$ 2 = 4,400 `hc()` fits). It takes about 2–3 minutes the first time and is cached after that (`cache: true`), so subsequent renders are instant unless the code changes.
+This chunk actually runs (200 $\times$ 11 $\times$ 2 = 4,400 `hc()` fits, each with 10 random restarts). It takes about 10 $\times$ 2–3 min the first time and is cached after that (`cache: true`), so subsequent renders are instant unless the code changes.
 :::
 
 ### Whole-network reconstruction accuracy vs n
@@ -124,7 +124,16 @@ This chunk actually runs (200 $\times$ 11 $\times$ 2 = 4,400 `hc()` fits). It ta
 knitr::include_graphics("figures/plot1_whole_network_accuracy.png")
 ```
 
-Both networks show the same performance shape: accuracy climbs steeply from $n = 20$ to roughly $n = 150$, then plateaus. Specificity is high throughout (most possible edges are, correctly, not learned as networks are "sparse"), while precision is the slowest metric to climb: false-positive edges are the main error mode at small n.
+Both networks show the same performance shape: accuracy indicators climb steeply from $n = 20$ to roughly $n = 150$, then plateaus. 
+Specificity is high throughout (most possible edges are, correctly, not learned as networks are "sparse"), while precision is the slowest metric to climb: false-positive edges are the main error mode at small n.
+
+At $n=60$, we see acceptable levels of precision ($72\%$) and sensitivity/recall ($73\%$) with a high specificity ($93\%$).
+
+::: {.callout-note}
+Some performance metrics (precision, specificity) decrease slightly from n=200 to n=500. It happens because the greedy hill-climbing algorithm can get stuck in a local optimum around "hub" variables (e.g. `BaselineSeverity`, `Chronicity`,
+`ComorbidAnxiety`) that have several downstream dependents: a spurious
+direct edge between two of those can capture their real-but-indirect relationship almost as well as the true confounding path. This can become *more* attractive to the greedy search as n grows and that correlation sharpens statistically. Random restarts (`restart = 10`) partly resolved it, but not entirely $\to$ room for research!
+:::
 
 ### Recovery of `Response`'s true predictors specifically
 
