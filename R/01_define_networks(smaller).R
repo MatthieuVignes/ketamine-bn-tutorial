@@ -1,5 +1,5 @@
 suppressPackageStartupMessages(library(bnlearn))
-set.seed(20260717)
+set.seed(2026)
 
 ## ------------------------------------------------------------------
 ## NETWORK A: baseline-only predictors (15 predictors + Response = 16 nodes)

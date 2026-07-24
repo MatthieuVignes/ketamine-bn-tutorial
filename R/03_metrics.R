@@ -1,6 +1,6 @@
 suppressPackageStartupMessages(library(bnlearn))
 
-## Undirected skeleton (set of unordered node pairs with an edge) of a BN
+## Undirected skeleton (set of unordered node pairs with an edge) of a bn.
 skeleton_pairs <- function(bn_obj) {
   a <- arcs(bn_obj)
   if (nrow(a) == 0) return(character(0))
@@ -31,14 +31,13 @@ skeleton_universe <- function(true_dag) {
 }
 
 ## Skeleton-level precision / recall / specificity / F1, plus SHD (on CPDAGs,
-## via bnlearn::shd) and a targeted metric for recovery of of the edges
-## touching Response. More specifically its parent set, since Response is a sink node
+## via bnlearn::shd) and a targeted metric for recovery of the edges
+## touching Response -- i.e. its parent set, since Response is a sink node
 ## (no children) in both networks here. Note this is NOT the general
 ## definition of a Markov blanket (parents + children + spouses/co-parents
 ## of children) -- it only coincides with it because Response has no
 ## children. If Response ever gains a child (e.g. a downstream outcome),
 ## this metric would need to include that child's other parents too.
-## That later is probably what a clinician-facing predictive model actually needs.
 evaluate_reconstruction <- function(true_dag, learned_dag) {
   nodes_all   <- nodes(true_dag)
   universe    <- all_possible_pairs(nodes_all)
@@ -69,11 +68,11 @@ evaluate_reconstruction <- function(true_dag, learned_dag) {
   r_precision <- if ((r_tp + r_fp) > 0) r_tp / (r_tp + r_fp) else NA
   r_recall    <- if ((r_tp + r_fn) > 0) r_tp / (r_tp + r_fn) else NA
 
-  data.frame(tp = tp, fp = fp, fn = fn, tn = tn,
+  data.frame(
+    tp = tp, fp = fp, fn = fn, tn = tn,
     precision = precision, sensitivity = sensitivity,
     specificity = specificity, f1 = f1, shd = shd_val,
     response_precision = r_precision, response_recall = r_recall,
     response_true_edges = length(resp_true)
   )
 }
-
