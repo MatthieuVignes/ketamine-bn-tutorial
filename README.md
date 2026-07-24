@@ -2,7 +2,7 @@
 
 A simulation-based sample-size / power analysis for Bayesian network
 structure learning with [`bnlearn`](https://www.bnlearn.com/), built around a
-worked example: predicting treatment response from 20 clinical,
+worked example: predicting treatment response from 15 (or 20 in a different version) clinical,
 neuropsychological, and actigraphy variables with n = 60.
 
 **[Read the tutorial →](https://MatthieuVignes.github.io/ketamine-bn-tutorial/index.html)**
