@@ -16,7 +16,7 @@ execute:
 ## Motivation
 
 We want to build a **predictive model** for (e.g. Ketamine) treatment response using a Bayesian network. 
-Our measurements include a handful of clinical variables, some neuropsychological test scores, a few actigraphy-derived circadian-rhythm metrics, and an outcome. We hypothetise 20 candidate causal predictors, and our planned sample size is $n = 60$, set mostly because of feasibility: recruitment window and budget, not because of a formal power analysis.
+Our measurements include a handful of clinical variables, some neuropsychological test scores, a few actigraphy-derived circadian-rhythm metrics, and an outcome. We hypothetise 15 (20 in another version of these simulations) candidate causal predictors, and our planned sample size is $n = 60$, set mostly because of feasibility: recruitment window and budget, not because of a formal power analysis.
 
 The present simulation scheme acts as en empirical evaluation to answer the following question: *How good is n = 60 to learn a useful network with 20 variables?*.
 
@@ -41,16 +41,21 @@ suppressPackageStartupMessages({
 })
 ```
 
-## Step 1 - Define two candidate "true" networks
+## Step 1 — Define two candidate "true" networks
 
 We compare two scenarios:
 
-- **Network A (21 nodes)** contains 20 baseline predictors from demographics/illness course, to comorbidity/history, to treatment history, to suicidality/functioning, to neuropsychological domain scores, to actigraphy rest-activity-rhythm (RAR) parameters, plus a continuous `Response` outcome node.
-- **Network B (24 nodes)** consists in Network A plus 3 early within-treatment "change" variables (`EarlyMADRSChange`, `EarlyActigraphyChange`, `EarlySleepChange`), testing whether adding longitudinal predictors helps or hurts structure recovery at a fixed sample size.
+- **Network A (16 nodes)**: contains 15 baseline predictors from demographics/illness course, to comorbidity/history, to treatment history, to suicidality/functioning, to neuropsychological domain scores, to actigraphy rest-activity-rhythm (RAR) parameters, plus a continuous `Response` outcome node.
+- **Network B (19 nodes)** consists in Network A plus 3 early within-treatment "change" variables (`EarlyMADRSChange`, `EarlyActigraphyChange`, `EarlySleepChange`), testing whether adding longitudinal predictors helps or hurts structure recovery at a fixed sample size.
+
+::: {.callout-note}
+The original candidate list had 20 baseline predictors (available in a different tutorial, which uses `R/01_define_networks.R` instead of `R/01_define_networks(smaller).R`). Trimmed to 15 here by collapsing correlated items into composites rather than dropping them outright: 4 neuropsychological domain scores became 2 (`PsychomotorSpeed` kept standalone, as it has the most ketamine-specific evidence in the cited literature, while executive function, learning/memory, and attention/
+working memory were merged into a single `HigherCognition` composite), and 3 actigraphy sleep metrics became 1 (`SleepQuality`). One weak predictor, `FamilyHistory`, was dropped outright rather than merged.
+:::
 
 ```{r}
 #| label: define-networks
-#| file: R/01_define_networks.R
+#| file: R/01_define_networks(smaller).R
 ```
 
 Both are directed acyclic graphs (DAGs) built with `bnlearn::model2network()`.
@@ -63,9 +68,10 @@ predicting, is highlighted:
 ![Network B: baseline + early-change](figures/networkB_diagram.png)
 :::
 
-## Step 2 - Attach effect sizes
+## Step 2 — Attach effect sizes
 
 Each arc gets a linear-Gaussian standardised coefficient |β| ~ 0.30–0.55, which are moderate effect sizes comparable to the small–moderate correlations reported in the depression-prediction literature). This turns the DAG into a fully specified generative model we can simulate from.
+
 
 ```{r}
 #| label: fit-parameters
@@ -73,9 +79,9 @@ Each arc gets a linear-Gaussian standardised coefficient |β| ~ 0.30–0.55, whi
 ```
 
 The printed $R^2$ values are a sanity check on the signal we're asking the
-learning algorithm to recover: moderate-to-strong ($R^2 \, \approx \,$ 0.50 - 0.70) for the `Response` node, not unrealistically easy and not hopeless.
+learning algorithm to recover: moderate-to-strong ($R^2 \, \approx \,$ 0.35 - 0.75) for the `Response` node, not unrealistically easy and not hopeless.
 
-## Step 3 - Evaluation metrics
+## Step 3 — Evaluation metrics
 
 A learnt network is compared to the true DAG at the level of the **skeleton**
 (undirected edges), not directed arcs, because many DAGs are Markov-equivalent
@@ -92,13 +98,13 @@ a complete miss would understate real performance. We report:
 #| file: R/03_metrics.R
 ```
 
-## Step 4 - Monte Carlo simulation across sample sizes
+## Step 4 — Monte Carlo simulation across sample sizes
 
 For both networks, at n = 20, 30, 40, 50, 60, 75, 100, 150, 200, 300, 500, we
-simulate $200$ independent datasets, learn structure via score-based
+simulate 200 independent datasets, learn structure via score-based
 hill-climbing (`hc(..., score = "bic-g")`), and evaluate against the truth.
-We also record, at $n = 20/60/100/200$, how often each possible edge was
-learned across the $200$ replicates. This gives us a natural continuous "score" per edge, we will used later for ROC/precision-recall curves.
+We also record, at n = 20/60/100/200, how often each possible edge was
+learned across the 200 replicates. This gives us a natural continuous "score" per edge, we will used later for ROC/precision-recall curves.
 
 ```{r}
 #| label: run-simulation
@@ -142,12 +148,12 @@ knitr::include_graphics("figures/plot3_shd_vs_n.png")
 
 This is an "edge-editing" distance from the true network. A value of $5$ for example, means that five ($5$) edges need to be added, removed or reverted from the predicted network to obtain the true network. This value is to be compared to the number of edges in the true network and to that in the predicted network. Notice that `bnlearn::shd()` operates on the CPDAGs; some edges are directed (typically part of a v-structure or whose direction can be identified from the graph structure) and others are not.
 
-### ROC and precision–recall (PR) curves for edge recovery
+### ROC and precision–recall curves for edge recovery
 
 A single `hc()` fit only gives a present/absent decision per edge, not a
-score. To get a genuine ROC/PR curve we use the **frequency with which
-each possible edge was learned across the $200$ independent simulated
-datasets** at a given $n$ as the continuous score, then sweep a threshold over
+score — so to get a genuine ROC/PR curve we use the **frequency with which
+each possible edge was learned across the 200 independent simulated
+datasets** at a given n as the continuous score, then sweep a threshold over
 it.
 
 ```{r}
@@ -177,20 +183,19 @@ knitr::kable(
 )
 ```
 
-**At n = 60 (Network A, single hc, averaged performance):** whole-network skeleton precision $\approx$
-0.66, sensitivity $\approx$ 0.77, specificity $\approx$ 0.93, mean SHD $\approx$ 31; recovery of
-`Response`'s true predictors specifically: precision $\approx$ 0.81, recall $\approx$ 0.66.
+**At n = 60 (Network A, single hc):** whole-network skeleton precision ≈
+0.73, sensitivity ≈ 0.72, specificity ≈ 0.93, mean SHD ≈ 22; recovery of
+`Response`'s true predictors specifically: precision ≈ 0.82, recall ≈ 0.59.
 
 ## Adapting this for your own project
 
-- Replace the DAGs in `R/01_define_networks.R` with your own candidate
-  variable set and best-guess causal structure.
+- Replace the DAGs in `R/01_define_networks(smaller).R` (or `R/01_define_networks.R`) with your own candidate variable set and (best-guess) causal structure.
 - Adjust effect sizes in `R/02_fit_parameters.R` to match expected or
   pilot-data correlations if you have them.
 - If your outcome is genuinely binary (e.g. an exact ≥50% symptom-reduction
   cutoff) rather than continuous, this would need a conditional Gaussian
-  network (`score = "bic-cg"`) with mixed node types instead of the pure
-  Gaussian network used here.
+  network (`score = "bic-cg"` in `hc()` calls) with mixed node types instead of the pure
+  Gaussian network used here. $R^2$ metrics for the response would also need to be changed.
 - If you want to use a different/more tailored network reconstruction method, everything happens in `R/04_run_simulation.R` where we use the `hc()` function.
 
 ## Session info
