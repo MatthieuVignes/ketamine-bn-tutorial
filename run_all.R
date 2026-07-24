@@ -14,6 +14,7 @@ source("R/01_define_networks(smaller).R") # builds the two true DAGs + diagrams
 
 source("R/02_fit_parameters.R") # attaches linear-Gaussian parameters, sanity-checks R^2
 source("R/03_metrics.R") # computes performance of prediction vs true networks
+# This can take a few minutes
 source("R/04_run_simulation.R") # Monte Carlo (200 reps) simulation/hc() reconstruction power curve for n=20..500
-source("R/05_summarize_and_plot.R") # tables (data/) + plots (figures/)
+source("R/05_summarise_and_plot.R") # tables (data/) + plots (figures/)
 
