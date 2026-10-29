@@ -1,9 +1,4 @@
-##################################################
-## Install required packages.
-## Run this once before anything else.
-##################################################
-
-required <- c("bnlearn", "ggplot2", "igraph", "parallel")
+required <- c("bnlearn", "ggplot2", "igraph", "parallel", "glmnet", "MASS")
 
 for (pkg in required) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
