@@ -1,8 +1,8 @@
 ---
 title: "Sample-size planning for a ketamine treatment-response prediction model"
-subtitle: "A simulation-based power analysis for Bayesian network structure learning"
+subtitle: "A simulation-based power analysis for Bayesian network structure learning, and for out-of-sample prediction performance"
 author: "Matthieu Vignes (w. N. Monk, G. Murray, R. Porter and W. Simcock)"
-date: "20 July 2026"
+date: "29 October 2026"
 date-format: "D MMM YYYY"
 format:
   html:
@@ -16,19 +16,19 @@ execute:
 ## Motivation
 
 We want to build a **predictive model** for (e.g. Ketamine) treatment response using a Bayesian network. 
-Our measurements include a handful of clinical variables, some neuropsychological test scores, a few actigraphy-derived circadian-rhythm metrics, and an outcome. We hypothetise 15 (20 in another version of these simulations) candidate causal predictors, and our planned sample size is $n = 60$, set mostly because of feasibility: recruitment window and budget, not because of a formal power analysis.
+Our measurements include a handful of clinical variables, some neuropsychological test scores, a few actigraphy-derived circadian-rhythm metrics, and an outcome. In Part 1 we hypothesise 15 candidate causal predictors (a 20-predictor variant is available in `R/01_define_networks.R`; Part 2 uses the 11 predictors pre-specified in the application), and our planned sample size is $n = 60$, set mostly because of feasibility: recruitment window and budget, not because of a formal power analysis.
 
-The present simulation scheme acts as en empirical evaluation to answer the following question: *How good is n = 60 to learn a useful network with 20 variables?*.
+The present simulation scheme acts as en empirical evaluation to answer the following question: *How good is n = 60 to learn a useful network with 15 candidate predictors?* (Part 1), and, *how well does a model trained on such data predict response in new patients?* (Part 2)
 
 Traditional power analysis cannot be applied here, as there is no single effect size or test statistic to power for. The "result" is an entire graph structure and the quality of the prediction on an outcome. 
 
 We first define a plausible ground-truth network. Then, we generate synthetic
-data from it at different sample sizes. In a third step, we run an intended structure-learning algorithm on each simulated dataset. Last, we measure how well it recovers the truth.
+data from it at different sample sizes. In a third step, we run an intended structure-learning algorithm (Part 1) and a prediction algorithm for new patients (Part 2) on each simulated dataset. Last, we measure how well it recovers the truth.
 
 This tutorial walks through these steps, using [`bnlearn`](https://www.bnlearn.com/), for two versions of the network (predictors measured at baseline only, vs. baseline + a few early within-treatment change variables), across sample sizes from 20 to 500.
 
 **Everything below is illustrative.** The network structure and effect sizes
-are a reasonable placeholder built from a real 20-variable candidate list, *not* fitted to real pilot data. 
+are a reasonable placeholder built from a real candidate-variable list, *not* fitted to real pilot data. 
 The code is written so any user can drop in their own DAG and effect sizes and get their own performance numbers out. The network reconstruction algorithm module can also be replaced with a different methods. See the [Adapting this for your own project](#adapting-this-for-your-own-project) section at the end.
 
 ```{r}
@@ -41,7 +41,9 @@ suppressPackageStartupMessages({
 })
 ```
 
-## Step 1 - Define two candidate "true" networks
+## Part 1 - Network structure recovery
+
+### Step 1 - Define two candidate "true" networks
 
 We compare two scenarios:
 
@@ -68,7 +70,7 @@ predicting, is highlighted:
 ![Network B: baseline + early-change](figures/networkB_diagram.png)
 :::
 
-## Step 2 - Attach effect sizes
+### Step 2 - Attach effect sizes
 
 Each arc gets a linear-Gaussian standardised coefficient |β| ~ 0.30–0.55, which are moderate effect sizes comparable to the small–moderate correlations reported in the depression-prediction literature). This turns the DAG into a fully specified generative model we can simulate from.
 
@@ -79,9 +81,9 @@ Each arc gets a linear-Gaussian standardised coefficient |β| ~ 0.30–0.55, whi
 ```
 
 The printed $R^2$ values are a sanity check on the signal we're asking the
-learning algorithm to recover: moderate-to-strong ($R^2 \, \approx \,$ 0.35 - 0.75) for the `Response` node, not unrealistically easy and not hopeless.
+learning algorithm to recover: moderate-to-strong for the `Response` node ($R^2 \approx 0.47$ for Network A and $\approx 0.80$ for Network B), not unrealistically easy and not hopeless. Note that this is a generous signal: Part 2 below also examines weaker, more realistic signal strengths.
 
-## Step 3 - Evaluation metrics
+### Step 3 - Evaluation metrics
 
 A learnt network is compared to the true DAG at the level of the **skeleton**
 (undirected edges), not directed arcs, because many DAGs are Markov-equivalent
@@ -98,7 +100,7 @@ a complete miss would understate real performance. We report:
 #| file: R/03_metrics.R
 ```
 
-## Step 4 - Monte Carlo simulation across sample sizes
+### Step 4 - Monte Carlo simulation across sample sizes
 
 For both networks, at n = 20, 30, 40, 50, 60, 75, 100, 150, 200, 300, 500, we
 simulate 200 independent datasets, learn structure via score-based
@@ -113,7 +115,7 @@ learned across the 200 Monte Carlo replicates. This gives us a natural continuou
 ```
 
 ::: {.callout-note}
-This chunk actually runs (200 $\times$ 11 $\times$ 2 = 4,400 `hc()` fits, each with 10 random restarts). It takes about 10 $\times$ 2–3 min the first time and is cached after that (`cache: true`), so subsequent renders are instant unless the code changes.
+This chunk actually runs (200 $\times$ 11 $\times$ 2 = 4,400 `hc()` fits, each with 10 random restarts). It takes a few minutes (about 3 minutes on parallel cores) the first time and is cached after that (`cache: true`), so subsequent renders are instant unless the code changes.
 :::
 
 ### Whole-network reconstruction accuracy vs n
@@ -145,7 +147,7 @@ knitr::include_graphics("figures/plot2_response_predictors_accuracy.png")
 
 This is an even more clinically relevant curve. We answer the question: "Did we correctly identify what predicts the response?"
 
-We see a very good precision (0.81), but a recall (0.66) lower than the global recall at $n= 60$ for the 21-node network.
+We see a very good precision (0.81), but a recall (0.66) about the same as the global recall at $n= 60$ for Network A (16 nodes; Network B reaches 0.82 recall for `Response`).
 
 ### Structural Hamming Distance vs n
 
@@ -174,9 +176,9 @@ knitr::include_graphics("figures/plot5_precision_recall_curves.png")
 ```
 
 ::: {.callout-warning}
-The high ROC Area Under the Curve (AUC) here (0.97-0.99) could make us overconfident. That is an artefact of class imbalance, not an error. These are sparse graphs (31-38 true arcs out of 210-276 possible pairs), so specificity is easy to achieve just by not proposing edges at random, which inflates AUC. 
+The high ROC Area Under the Curve (AUC) here (0.95-1.00) could make us overconfident. That is an artefact of class imbalance, not an error. These are sparse graphs (24 true arcs out of 120 possible pairs in Network A, and 31 out of 171 in Network B), so specificity is easy to achieve just by not proposing edges at random, which inflates AUC. 
 
-**The precision–recall curve is the more honest picture**: precision drops off well before recall reaches $1$, which is the more clinically relevant "how many of the edges I claim are real, actually are" question. Yet, the PR curves look almost "too good" at $n=20$. A single `hc()` fit on our actual $n=60$ dataset will not have near-perfect precision. We would get close to that by running many independent replicates (like the $200$ we did) and keeping only consistently-recovered edges. We cannot do this with one real dataset of fixed size. So the plot of Figure 1 are probably the most honest performance view in this regard.
+**The precision–recall curve is the more honest picture**: precision drops off well before recall reaches $1$, which is the more clinically relevant "how many of the edges I claim are real, actually are" question. Yet, the PR curves look almost "too good" at $n=20$. A single `hc()` fit on our actual $n=60$ dataset will not have near-perfect precision. We would get close to that by running many independent replicates (like the $200$ we did) and keeping only consistently-recovered edges. We cannot do this with one real dataset of fixed size. So the whole-network accuracy curves above (Figure 1) are probably the most honest performance view in this regard.
 :::
 
 ## Results summary
@@ -193,8 +195,155 @@ knitr::kable(
 ```
 
 **At n = 60 (Network A, single hc):** whole-network skeleton precision ≈
-0.73, sensitivity ≈ 0.72, specificity ≈ 0.93, mean SHD ≈ 22; recovery of
-`Response`'s true predictors specifically: precision ≈ 0.82, recall ≈ 0.59.
+0.72, sensitivity ≈ 0.73, specificity ≈ 0.93, mean SHD ≈ 22.8; recovery of
+`Response`'s true predictors specifically: precision ≈ 0.81, recall ≈ 0.66.
+
+Note that these are structure-recovery metrics. They do **not** say how accurately
+response will be predicted in a new patient; that is the subject of Part 2.
+
+## Part 2 - predicting the response in a *new* patient?
+
+Part 1 asks whether the **structure** of a network can be recovered. A clinician does not
+necessarily need the structure; they need a model whose predicted probability of response 
+is accurate and well calibrated in the next patient. Part 2 therefore evaluates
+**out-of-sample prediction**.
+
+### Set-up
+
+- **Predictors (11, pre-specified):** `BaselineSeverity` (MADRS), `Age`, `Gender`, 
+`NPriorTrials`; `PsychomotorSpeed`, `ExecFunction`; actigraphy `RA`, `IV`, `IS`, 
+`SE`, `M10`.
+- **Outcome:** a continuous, standardised improvement score (the %MADRS reduction).
+`Responder` is a fixed threshold of it, set so 60% respond (the K-BAT rate). The network 
+is learned on the continuous score and P(response) is derived from it (more efficient 
+than learning on a dichotomised outcome).
+- **Signal strength** is an explicit assumption: `r2` = variance of the improvement score
+explained by its true predictors, from 0.10 to 0.45. Six of the 11 predictors are assumed 
+to matter and five are null. These are assumptions, not estimates; edit `TRUE_EFFECTS` in 
+`R/06_prediction_generators.R`.
+- **Three scenarios:** the 11 predictors; 25 candidates (the 11 plus 14 correlated null
+candidates, to expose the cost of variable selection); and the 11 plus an *early-change*
+marker (e.g. week-2 change, correlated 0.5 with the final outcome).
+- **Learners:** the Bayesian-network pipeline (`hc`, BIC-Gaussian, Markov-blanket 
+regression), the same with bootstrap correction (`BN_hc_boot`), lasso on the continuous
+score, lasso on the binary outcome, a clinical-only linear model, and an "oracle", which
+knows which predictors matter.
+- **Training sizes:** n = 60 (the new study), 120 (new study pooled with K-BAT) and 200.
+- **Evaluation:** on a simulated independent validation set of n = 60 (what we will 
+actually observe, with its sampling noise) and on a very large test set (the model's 
+true out-of-sample performance).
+
+```{r}
+#| label: pred-setup
+#| echo: false
+pred <- read.csv("data/table2_prediction_summary.csv")
+g <- function(scn, n, r2, lrn, col) {
+  v <- pred[pred$scenario == scn & pred$n_train == n & abs(pred$r2 - r2) < 1e-9 & pred$learner == lrn, col]
+  if (length(v) == 0) NA_real_ else v[1]
+}
+f2 <- function(x) formatC(x, format = "f", digits = 2)
+pc <- function(x) paste0(round(100 * x), "%")
+nsim <- max(pred$n_sim)
+```
+
+### True out-of-sample AUC
+
+```{r}
+#| label: fig-plot6
+#| echo: false
+knitr::include_graphics("figures/plot6_prediction_auc.png")
+```
+
+With the 11 pre-specified predictors and a training set of n = 60, the bootstrap-corrected
+Bayesian-network pipeline reaches a true AUC of about `r f2(g("C_primary", 60, 0.20, "BN_hc_boot", "auc_true"))`
+(`r f2(g("C_primary", 60, 0.30, "BN_hc_boot", "auc_true"))`, `r f2(g("C_primary", 60, 0.45, "BN_hc_boot", "auc_true"))`)
+when the true signal is $R^2 = 0.20$ (0.30, 0.45). Pooling with K-BAT (n = 120) gives
+`r f2(g("C_primary", 120, 0.20, "BN_hc_boot", "auc_true"))`
+(`r f2(g("C_primary", 120, 0.30, "BN_hc_boot", "auc_true"))`, `r f2(g("C_primary", 120, 0.45, "BN_hc_boot", "auc_true"))`).
+
+Three points stand out:
+
+1. **Signal strength dominates.** At weak signal ($R^2 \le 0.20$) the AUC stays below 
+about 0.70 at every training size considered here (n up to 200).
+2. **Our preliminary BN is as accurate as a penalised regression.** (Lasso)
+The case for the network is interpretability, probabilistic output and handling of 
+missing predictors (to be fully implemented). Lasso on the dichotomised outcome is worse than learning on the continuous score.
+3. **Selection among many candidates costs some accuracy** (middle column), mostly at 
+n = 60, which is one reason the predictor set is pre-specified.
+
+### Will an n = 60 validation set confirm it?
+
+```{r}
+#| label: fig-plot7
+#| echo: false
+knitr::include_graphics("figures/plot7_validation_assurance.png")
+```
+
+The observed validation AUC is itself noisy. We define a pre-specified success rule: 
+the lower 95% bound of the validation AUC exceeds 0.60.
+For the 11-predictor model with $R^2 = 0.30$ the probability of satisfying it is
+`r pc(g("C_primary", 60, 0.30, "BN_hc_boot", "p_lb_gt_060"))` when training on n = 60 and
+`r pc(g("C_primary", 120, 0.30, "BN_hc_boot", "p_lb_gt_060"))` when training on 
+n = 120 pooled data; for $R^2 = 0.45$ it is
+`r pc(g("C_primary", 60, 0.45, "BN_hc_boot", "p_lb_gt_060"))` and 
+`r pc(g("C_primary", 120, 0.45, "BN_hc_boot", "p_lb_gt_060"))`.
+(Each probability is based on at most `r nsim` simulated studies, so is precise only 
+to a few percentage points.)
+
+### Are the predicted probabilities trustworthy?
+
+```{r}
+#| label: fig-plot8
+#| echo: false
+knitr::include_graphics("figures/plot8_calibration.png")
+```
+
+A model whose structure was learned from the same small sample it is fitted to is
+over-confident: its calibration slope at n = 60 is about
+`r f2(g("C_primary", 60, 0.30, "BN_hc", "cal_slope_median"))` (ideal = 1). 
+The bootstrap correction (refitting the *whole* pipeline, structure learning included, 
+in each resample) raises it to about
+`r f2(g("C_primary", 60, 0.30, "BN_hc_boot", "cal_slope_median"))`.
+
+### Baseline prediction vs. updating with an early-change marker
+
+```{r}
+#| label: fig-plot9
+#| echo: false
+knitr::include_graphics("figures/plot9_early_update.png")
+```
+
+A marker of early change correlated 0.5 with the final outcome raises AUC substantially 
+even when baseline signal is weak
+(AUC `r f2(g("D_early", 60, 0.10, "BN_hc_boot", "auc_true"))` at $R^2 = 0.10$, n = 60). This suggests a two-stage model: a baseline estimate before treatment, updated after 
+the first weeks.
+
+### Summary table
+
+```{r}
+#| label: tbl-pred
+#| echo: false
+keep <- pred[pred$scenario == "C_primary" &
+               pred$learner %in% c("BN_hc_boot", "Lasso_cont", "Clinical_OLS", "Oracle") &
+               pred$r2 %in% c(0.20, 0.30, 0.45) & pred$n_train %in% c(60, 120),
+             c("n_train", "r2", "learner", "auc_true", "cal_slope_median", "p_auc_ge_070", "p_lb_gt_060", "nb_gain")]
+names(keep) <- c("train n", "R2", "learner", "true AUC", "calibration slope", "Pr(val. AUC>=0.70)", "Pr(lower bound>0.60)", "net benefit gain")
+knitr::kable(keep[order(keep$`train n`, keep$R2, keep$learner), ], digits = 2, row.names = FALSE,
+             caption = "11 pre-specified predictors: true out-of-sample performance and chance an n = 60 validation set confirms it")
+```
+
+### What Part 2 does (and does not show)
+
+- All numbers are conditional on the assumed signal strength and structure. Real pilot 
+data (kept outcome-blind until the model is locked) would replace the assumptions.
+- It evaluates *prognostic* prediction under the treatment. It cannot show that a 
+predictor is specific to the treatment.
+- Net benefit at a "treat if P(response) >= 0.40" rule is small unless the signal is 
+strong. Whether that is clinically worthwhile is a clinical judgement, not a statistical 
+one.
+- A sensible study design therefore pre-specifies its success criteria, pools the new 
+and K-BAT data for development (with internal-external cross-validation), and treats the 
+first study as a proof of concept.
 
 ## Adapting this for your own project
 
@@ -202,10 +351,14 @@ knitr::kable(
 - Adjust effect sizes in `R/02_fit_parameters.R` to match expected or
   pilot-data correlations if you have them.
 - If your outcome is genuinely binary (e.g. an exact ≥50% symptom-reduction
-  cutoff) rather than continuous, this would need a conditional Gaussian
-  network (`score = "bic-cg"` in `hc()` calls) with mixed node types instead of the pure
-  Gaussian network used here. $R^2$ metrics for the response would also need to be changed.
-- If you want to use a different/more tailored network reconstruction method, everything happens in `R/04_run_simulation.R` where we use the `hc()` function.
+  cutoff): Part 1 uses a continuous outcome. Part 2 learns the network on the continuous
+  improvement score and derives P(response) from it, which keeps the Gaussian machinery
+  valid and uses more information than the dichotomised outcome. A network with a binary
+  node needs a conditional Gaussian score (`score = "bic-cg"`) and bnlearn does not allow 
+  a discrete node to have continuous parents, so the binary outcome would have to be a
+  parent rather than a child.
+- If you want to use a different/more tailored network reconstruction method, everything
+  happens in `R/04_run_simulation.R` where we use the `hc()` function.
 
 ## Session info
 
